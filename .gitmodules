@@ -1,0 +1,3 @@
+[submodule "VP_ANALYSIS/Zlib"]
+	path = VP_ANALYSIS/Zlib
+	url = https://github.com/madler/zlib.git
