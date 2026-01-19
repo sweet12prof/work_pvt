@@ -29,6 +29,7 @@
 
 #define CHUNK_SIZE 1000
 #define STRIDE_RATIO_LOWER_THRESHOLD 5
+#define METRIC_RATIO 5
 enum class InstType : UINT8 { MEM_LOAD, MEM_STORE };
 
 struct CallFrame {
@@ -49,7 +50,9 @@ struct Classification_Metrics{
             zero_stride_ratio, 
             entropy, 
             variance, 
-            number_of_strides;
+            number_of_strides, 
+            symmetry_ratio,
+            mean;
 };
 
 // struct Stride_Frequency_Distribution{
@@ -60,6 +63,7 @@ struct Classification_Metrics{
 struct Stride_Dist_Struct{
     UINT64 dynamic_pc_count;
     UINT64 last_memaddress; 
+    UINT64 first_memaddress;
     INT64 current_stride;
     Classification_Metrics metrics;
     std::map <INT64, UINT64> stride_freq; 
