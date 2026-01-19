@@ -51,7 +51,7 @@ struct Classification_Metrics{
             entropy, 
             variance, 
             number_of_strides, 
-            symmetry_ratio,
+            sign_symmetry_ratio,
             mean;
 };
 

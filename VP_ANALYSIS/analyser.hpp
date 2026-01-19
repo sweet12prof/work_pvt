@@ -19,6 +19,7 @@ private:
   void get_per_pc_mean();
   void get_per_pc_variance();
   void get_per_pc_normalized_entropy();
+  void get_per_pc_stride_symmetry();
 
   UINT64 loads_processed;
   UINT64 accesses_count{0};
@@ -45,6 +46,8 @@ inline double get_zero_stride_ratio(UINT64 zero_stride_freq,
 double get_mean(const std::vector<std::pair<INT64, UINT64>> &freq_vec,
                 UINT64 dynamic_load_count);
 
+double get_sign_symmetry_ratio(const std::vector<INT64> &stride_vec);
+
 double get_variance(const std::vector<std::pair<INT64, UINT64>> &freq_vec,
                     double mean, UINT64 dynamic_load_count);
 
@@ -52,4 +55,6 @@ double get_normalized_entropy(const std::vector<UINT64> &freq_vec,
                               UINT64 dynamic_load_count);
 
 std::vector<UINT64> get_per_stride_freq_vec(const std::map<INT64, UINT64> &);
+
+std::vector<INT64> get_strides_per_pc(const std::map<INT64, UINT64> &);
 }; // namespace Address_Analysis
