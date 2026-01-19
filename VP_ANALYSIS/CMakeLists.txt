@@ -3,6 +3,10 @@ project(VP_ANALYSIS)
 
 set(TRACE_DIR ${CMAKE_SOURCE_DIR}/run/traces)
 set(LOG_LOC ${CMAKE_SOURCE_DIR}/run/log/)
+
+file(MAKE_DIRECTORY "${TRACE_DIR}")
+file(MAKE_DIRECTORY "${LOG_LOC}")
+
 add_compile_definitions(TARGET_IA32E)
 set(dirs ${CMAKE_CURRENT_SOURCE_DIR})
 set(srcs)
