@@ -111,6 +111,10 @@ VP_ANALYSIS/Zlib/*
 !VP_ANALYSIS/Zlib/.gitmodules
 !VP_ANALYSIS/Zlib/.git
 
+VP_ANALYSIS/matplot/*
+!VP_ANALYSIS/matplot/.gitmodules
+!VP_ANALYSIS/matplot/.git
+
 **/build/
 **/.vscode
 **/obj-intel64
