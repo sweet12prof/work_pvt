@@ -4,6 +4,7 @@
 #include <cmath>
 #include <numeric>
 #include <utils.hpp>
+#include <iomanip>
 
 Address_Analysis::Analyser::Analyser(std::istream *file)
     : file(file), traceChunk(readFile(file)), loads_processed(0),
@@ -24,6 +25,7 @@ void Address_Analysis::Analyser::gen_pc_stide_distribution() {
       per_pc_dist.insert({item.pc,                 // pc
                           {1,                      // dynamic_inst/pc count
                            item.memAddress,        // last mem_address
+                           item.memAddress,
                            (INT64)item.memAddress, // init stride ini
                            {},
                            stride_freq_dist}});
@@ -57,6 +59,15 @@ void Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
            << std::endl;
     (*out) << "\tDominant Stride Ratio: "
            << item.second.metrics.dominant_stride_ratio << std::endl;
+    (*out) << "\tZero Stride Ratio: "
+           << item.second.metrics.zero_stride_ratio << std::endl
+           << "\tMean: "
+           << item.second.metrics.mean << std::endl
+           << "\tVariance: "
+           << item.second.metrics.variance << std::endl
+           << std::endl
+           << "\tNormalized Entropy: "
+           << std::fixed << std::setprecision(6) << item.second.metrics.entropy  << std::endl;
     for (auto item2 : item.second.stride_freq)
       (*out) << "\tStride: " << item2.first << " Frequency: " << item2.second
              << std::endl;
@@ -66,6 +77,10 @@ void Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
 void Address_Analysis::Analyser::gen_classifiction_metrics() {
   // for (auto pc_dist : per_pc_dist{auto};)
   get_per_pc_dominant_stride_ratio();
+  get_per_pc_zero_stride_ratio();
+  get_per_pc_mean();
+  get_per_pc_variance();
+  get_per_pc_normalized_entropy();
 }
 
 double
@@ -102,28 +117,23 @@ double Address_Analysis::get_variance(
   return sum / dynamic_load_count;
 }
 
-double
-Address_Analysis::get_normalized_entropy(const std::vector<UINT64> &freq_vec,
-                                         UINT64 dynamic_load_count) {
-  std::vector<double> prob_vec(freq_vec.size());
+double Address_Analysis::get_normalized_entropy(
+    const std::vector<UINT64> &freq_vec,
+    UINT64 dynamic_load_count) {
+  assert(freq_vec.size() != 0);
+  if (freq_vec.size() <= 1) return 0.0;
 
-  std::transform(freq_vec.begin(), freq_vec.end(), prob_vec.begin(),
-                 [dynamic_load_count](UINT64 freq) {
-                   double p = (double)freq / dynamic_load_count;
-                   assert(
-                       p != 0 &&
-                       "this should never happen, probability cannot be zero");
-                   return p;
-                 });
-
-  auto entropy_accum = std::accumulate(
-      prob_vec.begin(), prob_vec.end(), 0.0, [](double sum, double prob) {
-        return sum + static_cast<double>(prob) * std::log2(prob);
-      });
-  return -entropy_accum / (std::log2(freq_vec.size()));
+  double entropy = 0.0;
+  for (UINT64 freq : freq_vec) {
+    assert(freq != 0);
+    assert(dynamic_load_count != 0);
+    double p = static_cast<double>(freq) / dynamic_load_count;
+    entropy += p * std::log2(p);
+  }
+  return -entropy / std::log2(freq_vec.size());
 }
 
-std::vector<UINT64> Address_Analysis::get_per_stride_freq_vec(
+std::vector<UINT64> Address_Analysis::  get_per_stride_freq_vec(
     const std::map<INT64, UINT64> &stride_map) {
   std::vector<UINT64> freq_vec;
   for (auto item : stride_map) {
@@ -132,7 +142,7 @@ std::vector<UINT64> Address_Analysis::get_per_stride_freq_vec(
   return freq_vec;
 }
 
-void Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio() {
+void Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio(){
   for (auto &item : per_pc_dist) {
     auto stride_freq_vec =
         Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
@@ -142,3 +152,73 @@ void Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio() {
     item.second.metrics.dominant_stride_ratio = dom_stride_ratio;
   }
 }
+
+void Address_Analysis::Analyser::get_per_pc_zero_stride_ratio(){
+  for(auto &pc_dist : per_pc_dist){
+    auto it = pc_dist.second.stride_freq.find(0);
+    if(it == pc_dist.second.stride_freq.end()){
+      pc_dist.second.metrics.zero_stride_ratio = 0;
+    } else {
+      pc_dist.second.metrics.zero_stride_ratio = Address_Analysis::get_zero_stride_ratio(it->second, pc_dist.second.dynamic_pc_count);
+    }
+  }
+}
+
+ void Address_Analysis::Analyser::get_per_pc_mean(){
+   for(auto &pc_dist : per_pc_dist)
+    {
+      std::vector<std::pair<INT64, UINT64>> stride_freq_pair;
+      if(pc_dist.second.stride_freq.size() <  METRIC_RATIO){
+         pc_dist.second.metrics.mean = 0;
+      } else {
+         for(auto item : pc_dist.second.stride_freq){
+          if(item.first == pc_dist.second.first_memaddress){
+            continue;
+          }
+          stride_freq_pair.push_back({item.first, item.second});
+      }
+          pc_dist.second.metrics.mean = Address_Analysis::get_mean(stride_freq_pair, (pc_dist.second.dynamic_pc_count - 1));
+    }
+      }
+ }
+
+
+void Address_Analysis::Analyser::get_per_pc_variance(){
+  for(auto &pc_dist : per_pc_dist)
+    {
+      std::vector<std::pair<INT64, UINT64>> stride_freq_pair;
+      if(pc_dist.second.stride_freq.size() <  METRIC_RATIO){
+         pc_dist.second.metrics.variance = 0;
+      } else {
+         for(auto item : pc_dist.second.stride_freq){
+          if(item.first == pc_dist.second.first_memaddress){
+            continue;
+          }
+          stride_freq_pair.push_back({item.first, item.second});
+      }
+        pc_dist.second.metrics.variance = Address_Analysis::get_variance(stride_freq_pair, pc_dist.second.metrics.mean, (pc_dist.second.dynamic_pc_count - 1));
+    }
+      }
+}
+
+void Address_Analysis::Analyser::get_per_pc_normalized_entropy(){
+ for(auto& item : per_pc_dist){
+    auto stride_vec_per_pc = Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
+    item.second.metrics.entropy = Address_Analysis::get_normalized_entropy(stride_vec_per_pc, item.second.dynamic_pc_count);
+ }
+}
+
+/*
+/opt/pin-3.31/source/include/pin
+/opt/pin-3.31/source/include/pin/gen
+/opt/pin-3.31/source/tools/InstLib
+/opt/pin-3.31/extras/xed-intel64/include/xed
+/opt/pin-3.31/extras/components/include
+/opt/pin-3.31/extras/cxx/include
+/opt/pin-3.31/extras
+/opt/pin-3.31/extras/crt/include
+/opt/pin-3.31/extras/crt
+/opt/pin-3.31/extras/crt/include/arch-x86_64
+/opt/pin-3.31/extras/crt/include/kernel/uapi
+/opt/pin-3.31/extras/crt/include/kernel/uapi/asm-x86
+*/

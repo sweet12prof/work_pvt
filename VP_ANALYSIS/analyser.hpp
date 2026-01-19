@@ -15,6 +15,10 @@ private:
   std::istream *file;
   std::map<UINT64, Stride_Dist_Struct> per_pc_dist;
   void get_per_pc_dominant_stride_ratio();
+  void get_per_pc_zero_stride_ratio();
+  void get_per_pc_mean();
+  void get_per_pc_variance();
+  void get_per_pc_normalized_entropy();
 
   UINT64 loads_processed;
   UINT64 accesses_count{0};
