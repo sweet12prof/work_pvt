@@ -1,0 +1,6 @@
+/* Format (enum name, string name) */
+ACCESS_PATTERN_DEF(AFFINE_STRIDE_ACCESS_PATTERN,    "affine_stride_access") 
+ACCESS_PATTERN_DEF(IRREGULAR_RDS_PATTERN,           "irregular_rds_pattern")  
+ACCESS_PATTERN_DEF(IRREGULAR_RDS_OR_STRUCT_PATTERN, "irregular_rds_or_struct_pattern")
+ACCESS_PATTERN_DEF(REPETITIVE_FIELD_ACCESS_PATTERN, "repetitive_field_access_pattern")
+ACCESS_PATTERN_DEF(INFREQUENT_PATTERN,              "infrequent_pattern")

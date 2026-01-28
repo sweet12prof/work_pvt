@@ -1,3 +1,6 @@
+#ifndef ANALYSIS_HPP
+#define ANALYSIS_HPP
+
 #include <globals.hpp>
 #include <iostream>
 #include <vector>
@@ -9,6 +12,8 @@ public:
   void gen_classifiction_metrics();
   void process_trace();
   void print_per_pc_stride_dist(std::ostream *out);
+  Unqiue_Stride_Dist get_all_unique_strides_distribution() const;
+  void classify_access_pattern_per_pc();
 
 private:
   std::pair<bool, std::vector<TraceData>> traceChunk;
@@ -58,3 +63,5 @@ std::vector<UINT64> get_per_stride_freq_vec(const std::map<INT64, UINT64> &);
 
 std::vector<INT64> get_strides_per_pc(const std::map<INT64, UINT64> &);
 }; // namespace Address_Analysis
+
+#endif

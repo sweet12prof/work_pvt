@@ -1,10 +1,18 @@
+#include "access_pattern_define.hpp"
 #include <algorithm>
 #include <analyser.hpp>
 #include <cassert>
 #include <cmath>
 #include <iomanip>
 #include <numeric>
+#include <set>
 #include <utils.hpp>
+
+const char *Acccess_Pattern_Names[]{
+#define ACCESS_PATTERN_DEF(id, name) name,
+#include "access_pattern_table.def"
+#undef ACCESS_PATTERN_DEF
+    "unclassifed_pattern"};
 
 Address_Analysis::Analyser::Analyser(std::istream *file)
     : file(file), traceChunk(readFile(file)), loads_processed(0),
@@ -21,13 +29,14 @@ void Address_Analysis::Analyser::gen_pc_stide_distribution() {
     auto p{per_pc_dist.find(item.pc)};
     if (p == per_pc_dist.end()) {
       std::map<INT64, UINT64> stride_freq_dist;
-      stride_freq_dist[item.memAddress] = 1;
+      // stride_freq_dist[item.memAddress] = 1;
       per_pc_dist.insert({item.pc,          // pc
-                          {1,               // dynamic_inst/pc count
+                          {0,               // dynamic_inst/pc count
                            item.memAddress, // last mem_address
                            item.memAddress,
-                           (INT64)item.memAddress, // init stride ini
+                           0, // init stride ini
                            {},
+                           Acccess_Pattern_Type::UNCLASSIFIED_PATTERN,
                            stride_freq_dist}});
 
     } else {
@@ -67,6 +76,9 @@ void Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
            << item.second.metrics.entropy << std::endl
            << "\tSign Symmetry: " << item.second.metrics.sign_symmetry_ratio
            << std::endl
+           << "\tPer pc pattern is dominated by : "
+           << Acccess_Pattern_Names[(int)item.second
+                                        .dominant_access_pattern_per_static_pc]
            << std::endl;
     for (auto item2 : item.second.stride_freq)
       (*out) << "\tStride: " << item2.first << " Frequency: " << item2.second
@@ -82,6 +94,7 @@ void Address_Analysis::Analyser::gen_classifiction_metrics() {
   get_per_pc_variance();
   get_per_pc_normalized_entropy();
   get_per_pc_stride_symmetry();
+  classify_access_pattern_per_pc();
 }
 
 double
@@ -121,7 +134,7 @@ double Address_Analysis::get_variance(
 double
 Address_Analysis::get_normalized_entropy(const std::vector<UINT64> &freq_vec,
                                          UINT64 dynamic_load_count) {
-  assert(freq_vec.size() != 0);
+  // assert(freq_vec.size() != 0);
   if (freq_vec.size() <= 1)
     return 0.0;
 
@@ -175,13 +188,13 @@ void Address_Analysis::Analyser::get_per_pc_mean() {
       pc_dist.second.metrics.mean = 0;
     } else {
       for (auto item : pc_dist.second.stride_freq) {
-        if (item.first == pc_dist.second.first_memaddress) {
-          continue;
-        }
+        // if (item.first == pc_dist.second.first_memaddress) {
+        //   continue;
+        // }
         stride_freq_pair.push_back({item.first, item.second});
       }
       pc_dist.second.metrics.mean = Address_Analysis::get_mean(
-          stride_freq_pair, (pc_dist.second.dynamic_pc_count - 1));
+          stride_freq_pair, (pc_dist.second.dynamic_pc_count));
     }
   }
 }
@@ -193,14 +206,14 @@ void Address_Analysis::Analyser::get_per_pc_variance() {
       pc_dist.second.metrics.variance = 0;
     } else {
       for (auto item : pc_dist.second.stride_freq) {
-        if (item.first == pc_dist.second.first_memaddress) {
-          continue;
-        }
+        // if (item.first == pc_dist.second.first_memaddress) {
+        //   continue;
+        // }
         stride_freq_pair.push_back({item.first, item.second});
       }
       pc_dist.second.metrics.variance = Address_Analysis::get_variance(
           stride_freq_pair, pc_dist.second.metrics.mean,
-          (pc_dist.second.dynamic_pc_count - 1));
+          (pc_dist.second.dynamic_pc_count));
     }
   }
 }
@@ -222,8 +235,8 @@ double Address_Analysis::get_sign_symmetry_ratio(
       negative_samples++;
     else
       positive_samples++;
-  return (negative_samples == 0) ? 100000
-                                 : (double)positive_samples / negative_samples;
+  return (double)std::min(positive_samples, negative_samples) /
+         std::max(positive_samples, negative_samples);
 }
 
 std::vector<INT64> Address_Analysis::get_strides_per_pc(
@@ -240,6 +253,56 @@ void Address_Analysis::Analyser::get_per_pc_stride_symmetry() {
         Address_Analysis::get_strides_per_pc(item.second.stride_freq);
     item.second.metrics.sign_symmetry_ratio =
         Address_Analysis::get_sign_symmetry_ratio(strides_per_pc_vec);
+  }
+}
+
+Unqiue_Stride_Dist
+Address_Analysis::Analyser::get_all_unique_strides_distribution() const {
+  std::map<INT64, UINT64> unique_strides_map;
+  for (const auto &pc_dist : per_pc_dist) {
+    for (const auto &item : pc_dist.second.stride_freq) {
+      unique_strides_map[item.first] += item.second;
+    }
+  }
+  std::vector<double> unique_strides_vec(unique_strides_map.size());
+  std::vector<double> unique_strides_freq(unique_strides_map.size());
+
+  for (auto &item : unique_strides_map) {
+    unique_strides_vec.push_back(item.first);
+    unique_strides_freq.push_back(item.second);
+  }
+
+  return {unique_strides_vec, unique_strides_freq};
+}
+
+void Address_Analysis::Analyser::classify_access_pattern_per_pc() {
+  for (auto &item : per_pc_dist) {
+    auto metrics = item.second.metrics;
+    auto dynamic_load_count = item.second.dynamic_pc_count;
+    item.second.dominant_access_pattern_per_static_pc =
+        ([metrics, dynamic_load_count]() {
+          if (dynamic_load_count < METRIC_RATIO)
+            return Acccess_Pattern_Type::INFREQUENT_PATTERN;
+          // repetitive same address (struct field)
+
+          if (metrics.zero_stride_ratio >= 0.5)
+            return Acccess_Pattern_Type::REPETITIVE_FIELD_ACCESS_PATTERN;
+
+          // high regularity: unit or fixed stride
+          if (metrics.dominant_stride_ratio > 0.85)
+            return Acccess_Pattern_Type::AFFINE_STRIDE_ACCESS_PATTERN;
+
+          // irregular / pointer chasing
+          if (metrics.entropy >= 0.65) {
+            if (metrics.sign_symmetry_ratio < 0.2)
+              return Acccess_Pattern_Type::IRREGULAR_RDS_OR_STRUCT_PATTERN;
+            else if (metrics.sign_symmetry_ratio >= 0.2)
+              return Acccess_Pattern_Type::IRREGULAR_RDS_PATTERN;
+          }
+
+          // fallback: unclassified
+          return Acccess_Pattern_Type::UNCLASSIFIED_PATTERN;
+        })();
   }
 }
 
