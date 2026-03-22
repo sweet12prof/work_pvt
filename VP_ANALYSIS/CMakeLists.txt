@@ -56,5 +56,5 @@ target_link_libraries(gzstream PUBLIC zlibstatic)
 
 target_link_libraries(main PUBLIC  matplot gzstream )
 
-target_compile_definitions(main PRIVATE TRACE_LOC="$ENV{TRACE_DIR}/" LOG_LOC="${LOG_LOC}" RUN_LOC="${RUN_LOC}")
+target_compile_definitions(main PRIVATE TRACE_LOC="$ENV{TRACE_DIR}" LOG_LOC="${LOG_LOC}" RUN_LOC="${RUN_LOC}")
 

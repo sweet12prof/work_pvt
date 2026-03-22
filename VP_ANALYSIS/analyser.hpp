@@ -1,10 +1,12 @@
 #ifndef ANALYSIS_HPP
 #define ANALYSIS_HPP
 
+#include <boost/graph/adjacency_list.hpp>
 #include <globals.hpp>
 #include <iostream>
 #include <vector>
-namespace Address_Analysis {
+
+namespace Static_Address_Analysis {
 class Analyser {
 public:
   Analyser(std::istream *file);
@@ -62,6 +64,5 @@ double get_normalized_entropy(const std::vector<UINT64> &freq_vec,
 std::vector<UINT64> get_per_stride_freq_vec(const std::map<INT64, UINT64> &);
 
 std::vector<INT64> get_strides_per_pc(const std::map<INT64, UINT64> &);
-}; // namespace Address_Analysis
-
+}; // namespace Static_Address_Analysis
 #endif

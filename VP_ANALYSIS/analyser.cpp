@@ -14,11 +14,11 @@ const char *Acccess_Pattern_Names[]{
 #undef ACCESS_PATTERN_DEF
     "unclassifed_pattern"};
 
-Address_Analysis::Analyser::Analyser(std::istream *file)
+Static_Address_Analysis::Analyser::Analyser(std::istream *file)
     : file(file), traceChunk(readFile(file)), loads_processed(0),
       accesses_count(0) {}
 
-void Address_Analysis::Analyser::gen_pc_stide_distribution() {
+void Static_Address_Analysis::Analyser::gen_pc_stide_distribution() {
   if (traceChunk.second.empty())
     return;
   for (auto item : traceChunk.second) {
@@ -49,14 +49,14 @@ void Address_Analysis::Analyser::gen_pc_stide_distribution() {
   }
 }
 
-void Address_Analysis::Analyser::process_trace() {
+void Static_Address_Analysis::Analyser::process_trace() {
   do {
     gen_pc_stide_distribution();
     traceChunk = readFile(file);
   } while (!traceChunk.first);
 }
 
-void Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
+void Static_Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
   (*out) << " Loads processed: " << loads_processed << std::endl;
   (*out) << "accesses processed: " << accesses_count << std::endl
          << std::endl
@@ -86,7 +86,7 @@ void Address_Analysis::Analyser::print_per_pc_stride_dist(std::ostream *out) {
   }
 }
 
-void Address_Analysis::Analyser::gen_classifiction_metrics() {
+void Static_Address_Analysis::Analyser::gen_classifiction_metrics() {
   // for (auto pc_dist : per_pc_dist{auto};)
   get_per_pc_dominant_stride_ratio();
   get_per_pc_zero_stride_ratio();
@@ -98,7 +98,7 @@ void Address_Analysis::Analyser::gen_classifiction_metrics() {
 }
 
 double
-Address_Analysis::get_dominant_stride_ratio(const std::vector<UINT64> &freq_vec,
+Static_Address_Analysis::get_dominant_stride_ratio(const std::vector<UINT64> &freq_vec,
                                             UINT64 dynamic_load_count) {
   auto it = std::max_element(freq_vec.begin(), freq_vec.end());
   return dynamic_load_count < STRIDE_RATIO_LOWER_THRESHOLD
@@ -106,7 +106,7 @@ Address_Analysis::get_dominant_stride_ratio(const std::vector<UINT64> &freq_vec,
              : static_cast<double>(*it) / dynamic_load_count;
 }
 
-double Address_Analysis::get_mean(
+double Static_Address_Analysis::get_mean(
     const std::vector<std::pair<INT64, UINT64>> &freq_map,
     UINT64 dynamic_load_count) {
   double sum = std::accumulate(
@@ -118,7 +118,7 @@ double Address_Analysis::get_mean(
   return sum / dynamic_load_count;
 }
 
-double Address_Analysis::get_variance(
+double Static_Address_Analysis::get_variance(
     const std::vector<std::pair<INT64, UINT64>> &freq_vec, double mean,
     UINT64 dynamic_load_count) {
   auto sum = std::accumulate(
@@ -132,7 +132,7 @@ double Address_Analysis::get_variance(
 }
 
 double
-Address_Analysis::get_normalized_entropy(const std::vector<UINT64> &freq_vec,
+Static_Address_Analysis::get_normalized_entropy(const std::vector<UINT64> &freq_vec,
                                          UINT64 dynamic_load_count) {
   // assert(freq_vec.size() != 0);
   if (freq_vec.size() <= 1)
@@ -148,7 +148,7 @@ Address_Analysis::get_normalized_entropy(const std::vector<UINT64> &freq_vec,
   return -entropy / std::log2(freq_vec.size());
 }
 
-std::vector<UINT64> Address_Analysis::get_per_stride_freq_vec(
+std::vector<UINT64> Static_Address_Analysis::get_per_stride_freq_vec(
     const std::map<INT64, UINT64> &stride_map) {
   std::vector<UINT64> freq_vec;
   for (auto item : stride_map) {
@@ -157,10 +157,10 @@ std::vector<UINT64> Address_Analysis::get_per_stride_freq_vec(
   return freq_vec;
 }
 
-void Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio() {
+void Static_Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio() {
   for (auto &item : per_pc_dist) {
     auto stride_freq_vec =
-        Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
+        Static_Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
     auto dom_stride_ratio = get_dominant_stride_ratio(
         stride_freq_vec, item.second.dynamic_pc_count);
     // assert(dom_stride_ratio != 0 && "ratio cannot be zero");
@@ -168,20 +168,20 @@ void Address_Analysis::Analyser::get_per_pc_dominant_stride_ratio() {
   }
 }
 
-void Address_Analysis::Analyser::get_per_pc_zero_stride_ratio() {
+void Static_Address_Analysis::Analyser::get_per_pc_zero_stride_ratio() {
   for (auto &pc_dist : per_pc_dist) {
     auto it = pc_dist.second.stride_freq.find(0);
     if (it == pc_dist.second.stride_freq.end()) {
       pc_dist.second.metrics.zero_stride_ratio = 0;
     } else {
       pc_dist.second.metrics.zero_stride_ratio =
-          Address_Analysis::get_zero_stride_ratio(
+          Static_Address_Analysis::get_zero_stride_ratio(
               it->second, pc_dist.second.dynamic_pc_count);
     }
   }
 }
 
-void Address_Analysis::Analyser::get_per_pc_mean() {
+void Static_Address_Analysis::Analyser::get_per_pc_mean() {
   for (auto &pc_dist : per_pc_dist) {
     std::vector<std::pair<INT64, UINT64>> stride_freq_pair;
     if (pc_dist.second.stride_freq.size() < METRIC_RATIO) {
@@ -193,13 +193,13 @@ void Address_Analysis::Analyser::get_per_pc_mean() {
         // }
         stride_freq_pair.push_back({item.first, item.second});
       }
-      pc_dist.second.metrics.mean = Address_Analysis::get_mean(
+      pc_dist.second.metrics.mean = Static_Address_Analysis::get_mean(
           stride_freq_pair, (pc_dist.second.dynamic_pc_count));
     }
   }
 }
 
-void Address_Analysis::Analyser::get_per_pc_variance() {
+void Static_Address_Analysis::Analyser::get_per_pc_variance() {
   for (auto &pc_dist : per_pc_dist) {
     std::vector<std::pair<INT64, UINT64>> stride_freq_pair;
     if (pc_dist.second.stride_freq.size() < METRIC_RATIO) {
@@ -211,23 +211,23 @@ void Address_Analysis::Analyser::get_per_pc_variance() {
         // }
         stride_freq_pair.push_back({item.first, item.second});
       }
-      pc_dist.second.metrics.variance = Address_Analysis::get_variance(
+      pc_dist.second.metrics.variance = Static_Address_Analysis::get_variance(
           stride_freq_pair, pc_dist.second.metrics.mean,
           (pc_dist.second.dynamic_pc_count));
     }
   }
 }
 
-void Address_Analysis::Analyser::get_per_pc_normalized_entropy() {
+void Static_Address_Analysis::Analyser::get_per_pc_normalized_entropy() {
   for (auto &item : per_pc_dist) {
     auto stride_vec_per_pc =
-        Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
-    item.second.metrics.entropy = Address_Analysis::get_normalized_entropy(
+        Static_Address_Analysis::get_per_stride_freq_vec(item.second.stride_freq);
+    item.second.metrics.entropy = Static_Address_Analysis::get_normalized_entropy(
         stride_vec_per_pc, item.second.dynamic_pc_count);
   }
 }
 
-double Address_Analysis::get_sign_symmetry_ratio(
+double Static_Address_Analysis::get_sign_symmetry_ratio(
     const std::vector<INT64> &stride_vec) {
   UINT positive_samples{0}, negative_samples{0};
   for (auto item : stride_vec)
@@ -239,7 +239,7 @@ double Address_Analysis::get_sign_symmetry_ratio(
          std::max(positive_samples, negative_samples);
 }
 
-std::vector<INT64> Address_Analysis::get_strides_per_pc(
+std::vector<INT64> Static_Address_Analysis::get_strides_per_pc(
     const std::map<INT64, UINT64> &stride_freq_map) {
   std::vector<INT64> stride_vec;
   for (auto item : stride_freq_map)
@@ -247,17 +247,17 @@ std::vector<INT64> Address_Analysis::get_strides_per_pc(
   return stride_vec;
 }
 
-void Address_Analysis::Analyser::get_per_pc_stride_symmetry() {
+void Static_Address_Analysis::Analyser::get_per_pc_stride_symmetry() {
   for (auto &item : per_pc_dist) {
     auto strides_per_pc_vec =
-        Address_Analysis::get_strides_per_pc(item.second.stride_freq);
+        Static_Address_Analysis::get_strides_per_pc(item.second.stride_freq);
     item.second.metrics.sign_symmetry_ratio =
-        Address_Analysis::get_sign_symmetry_ratio(strides_per_pc_vec);
+        Static_Address_Analysis::get_sign_symmetry_ratio(strides_per_pc_vec);
   }
 }
 
 Unqiue_Stride_Dist
-Address_Analysis::Analyser::get_all_unique_strides_distribution() const {
+Static_Address_Analysis::Analyser::get_all_unique_strides_distribution() const {
   std::map<INT64, UINT64> unique_strides_map;
   for (const auto &pc_dist : per_pc_dist) {
     for (const auto &item : pc_dist.second.stride_freq) {
@@ -275,7 +275,7 @@ Address_Analysis::Analyser::get_all_unique_strides_distribution() const {
   return {unique_strides_vec, unique_strides_freq};
 }
 
-void Address_Analysis::Analyser::classify_access_pattern_per_pc() {
+void Static_Address_Analysis::Analyser::classify_access_pattern_per_pc() {
   for (auto &item : per_pc_dist) {
     auto metrics = item.second.metrics;
     auto dynamic_load_count = item.second.dynamic_pc_count;
