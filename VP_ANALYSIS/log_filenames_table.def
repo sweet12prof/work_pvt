@@ -1,0 +1,8 @@
+/* format (variable_name, "string") */
+LOG_FILE_DEFINE(PC_SCC          ,             pc_scc.txt            )
+LOG_FILE_DEFINE(PC_SELF_LOOP    ,             pc_self_loop.txt      )
+LOG_FILE_DEFINE(MEM_SCC         ,             mem_scc.txt           )
+LOG_FILE_DEFINE(MEM_SELF_LOOP   ,             mem_self_loop.txt     )
+LOG_FILE_DEFINE(LOG             ,             logfile.txt           )
+LOG_FILE_DEFINE(MEM_ADDR_FREQ   ,             mem_addr_freq.txt     )
+LOG_FILE_DEFINE(PC_ADDR_FREQ    ,             pc_freq.txt           )
