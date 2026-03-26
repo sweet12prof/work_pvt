@@ -125,3 +125,6 @@ VP_ANALYSIS/matplot/*
 **/log/
 **/*.vcxproj
 *.png
+**/TestPlot/*
+**/run/
+**/*.log

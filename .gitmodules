@@ -4,3 +4,6 @@
 [submodule "VP_ANALYSIS/matplot"]
 	path = VP_ANALYSIS/matplot
 	url = https://github.com/alandefreitas/matplotplusplus.git
+[submodule "TestPlot/matplot"]
+	path = TestPlot/matplot
+	url = https://github.com/alandefreitas/matplotplusplus.git
