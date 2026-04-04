@@ -26,14 +26,13 @@
 #endif
 
 int main() {
-  std::string filename =
-      std::string(TRACE_LOC) + "traces/bwaves_0.ref_2092028.pp.trace";
+  std::string filename = std::string(TRACE_LOC) + "gcc_0.ref_2960502.pp";
   std::cout << std::endl << "Location is " << filename << std::endl;
   igzstream file{filename.c_str(), std::ios::binary | std::ios::in};
   igzstream file2{filename.c_str(), std::ios::binary | std::ios::in};
 
-  if (!file) {
-    std::cerr << "file not found, exiting ";
+  if (!file2) {
+    std::cout << "file not found, exiting " << std::endl;
     return 1;
   }
   {

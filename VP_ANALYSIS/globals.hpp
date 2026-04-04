@@ -23,15 +23,41 @@
 #ifndef GLOBALS_HPP
 #define GLOBALS_HPP
 
+#include <types.h>
+
 #include <access_pattern_define.hpp>
 #include <array>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/strong_components.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index_container.hpp>
 #include <map>
-#include <types.h>
 #include <vector>
-
 #define CHUNK_SIZE 1000
 #define STRIDE_RATIO_LOWER_THRESHOLD 5
 #define METRIC_RATIO 5
+#define MAX_WINDOW_LENGTH 1024
+
+constexpr UINT64 POLY_BASE = 257;
+
+/* GRAPH STRUCTS AND TYPEDEFS */
+
+struct edgeProp {
+  INT64 self_loop_count = 0;
+};
+
+struct Vertex_Data {
+  ADDRINT value;
+  UINT64 value_frequency;
+};
+
+enum Vertex_Property { MEM_ADDRESS, PC };
+
+using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
+                                    Vertex_Data, edgeProp>;
+
+/*****************************/
 enum class InstType : UINT8 { MEM_LOAD, MEM_STORE };
 
 struct CallFrame {
@@ -47,15 +73,25 @@ struct TraceData {
   ADDRINT memAddress;
 };
 
+/* CLASSIFICATION METRICS */
+
 struct Classification_Metrics {
   double dominant_stride_ratio, zero_stride_ratio, entropy, variance,
       number_of_strides, sign_symmetry_ratio, mean;
 };
 
-// struct Stride_Frequency_Distribution{
-//     UINT64 frequency;
-//     Classification_Metrics metrics;
-// };
+struct Metrics {
+  UINT64 global_load_count;
+  UINT64 global_store_count;
+  /* window of load accesses, before an intermediate conflicting store  */
+  std::array<UINT64, 1000> loadIntervalFrequency;
+  UINT64 ControlCorrelatedAccessCount;
+  UINT64 GlobalCorrelatedAccessCount;
+};
+
+/******************************* */
+
+/*********** STATIC DISTRIBUTION STRUCTS ***************/
 
 struct Stride_Dist_Struct {
   UINT64 dynamic_pc_count;
@@ -77,14 +113,55 @@ struct AccessTypeCounts {
   UINT64 trulyIrregularFrequency;
   UINT64 IrregularButRepetitiveFrequency;
 };
+/******************************************/
 
-struct Metrics {
-  UINT64 global_load_count;
-  UINT64 global_store_count;
-  /* window of load accesses, before an intermediate conflicting store  */
-  std::array<UINT64, 1000> loadIntervalFrequency;
-  UINT64 ControlCorrelatedAccessCount;
-  UINT64 GlobalCorrelatedAccessCount;
+/************* VALUE TO VERTEX MAP *************/
+// using namespace boost::multi_index;
+struct Value_To_Vertex_Entry {
+  Graph::vertex_descriptor vertex_id;
+  ADDRINT value;
 };
 
+struct vertex_tag {};
+struct addrint_tag {};
+
+typedef boost::multi_index_container<
+    Value_To_Vertex_Entry,
+    boost::multi_index::indexed_by<
+        boost::multi_index::hashed_unique<
+            boost::multi_index::tag<vertex_tag>,
+            boost::multi_index::member<Value_To_Vertex_Entry,
+                                       Graph::vertex_descriptor,
+                                       &Value_To_Vertex_Entry::vertex_id>>,
+        boost::multi_index::hashed_unique<
+            boost::multi_index::tag<addrint_tag>,
+            boost::multi_index::member<Value_To_Vertex_Entry, ADDRINT,
+                                       &Value_To_Vertex_Entry::value>>>>
+    Value_To_Vertex_Container;
+/**************************************/
+constexpr UINT64 calculate_poly_constant(UINT64 index) {
+  UINT64 result = 1;
+  for (int i = 0; i < index; i++) {
+    result *= POLY_BASE;
+  }
+  return result;
+}
+
+// constexpr std::array<UINT64, MAX_WINDOW_LENGTH> generate_table() {
+//   std::array<UINT64, MAX_WINDOW_LENGTH> constants = {};
+//   constants[0] = 1;
+//   for (std::size_t i = 1; i < MAX_WINDOW_LENGTH; i++) {
+//     constants[i] = constants[i - 1] * POLY_BASE;
+//   }
+//   return constants;
+// }
+
+constexpr std::array<UINT64, MAX_WINDOW_LENGTH> constants_table = []() {
+  std::array<UINT64, MAX_WINDOW_LENGTH> constants = {};
+  constants[0] = 1;
+  for (std::size_t i = 1; i < MAX_WINDOW_LENGTH; i++) {
+    constants[i] = constants[i - 1] * POLY_BASE;
+  }
+  return constants;
+}();
 #endif

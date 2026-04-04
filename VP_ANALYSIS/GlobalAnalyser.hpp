@@ -1,5 +1,3 @@
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/strong_components.hpp>
 #include <iostream>
 
 #include "fileprocess.hpp"
@@ -7,28 +5,29 @@
 #ifndef GLOBALANALYSER_H
 #define GLOBALANALYSER_H
 
-struct edgeProp {
-  INT64 self_loop_count = 0;
-};
-
-struct Vertex_Data {
-  ADDRINT value;
-  UINT64 value_frequency;
-};
-
-enum Vertex_Property { MEM_ADDRESS, PC };
-
-using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS,
-                                    Vertex_Data, edgeProp>;
-
 UINT64 extract_vertex_from_trace(std::vector<TraceData>& traceChunk,
                                  UINT64 trace_index, Vertex_Property property);
+
+// sliding Window Hash
+UINT64 generate_window_hashes(std::vector<TraceData>& traceChunk,
+                              std::size_t window_length);
+UINT64 generate_initial_hash(std::vector<TraceData>& traceChunk,
+                             std::size_t window_length);
 
 class GlobalAnalyser_FT {
  public:
   void fill_graph(std::vector<TraceData>& traceChunk,
                   Vertex_Property vertex_property);
   void generate_strongly_connected_componenets();
+
+  /*              VALIDATE SLIDING WINDOWS                  */
+  // returns true if all elements in window are members of the same SCC
+  bool check_window_element_scc_membership(std::vector<UINT64>& window);
+  // returns true if window elements ordering have valid graph transitions
+  bool validate_window_element_transitions(std::vector<UINT64>& window);
+
+  /*      GENERATE AND PRE-FILTER WINDOWS, FREQUENCY         */
+  std::vector<std::vector<UINT64>> generate_sliding_windows();
 
   void print_self_loop_info(std::ostream* out) const;
   void print_value_frequency(std::ostream* out) const;
@@ -38,7 +37,7 @@ class GlobalAnalyser_FT {
   Graph g;
   // address to vertex ID map
   std::pair<INT64, std::vector<INT64>> component_result_pair;
-  std::map<UINT64, Graph::vertex_descriptor> value_to_vertex;
+  Value_To_Vertex_Container value_to_vertex_table;
 };
 
 #endif

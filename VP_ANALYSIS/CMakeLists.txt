@@ -34,9 +34,15 @@ message(STATUS "srcs locs are: ${srcs}")
 
 add_executable(main  ${srcs})
 
+# add_executable(boost_container try_m_index.cpp)
+# target_include_directories(boost_container PUBLIC 
+#                 "/opt/pin-3.31/extras/components/include"
+#                 ${CMAKE_CURRENT_SOURCE_DIR}
+#             )
+
 set(MATPLOTPP_BUILD_WITH_PEDANTIC_WARNINGS OFF)
 
-add_subdirectory(matplot)
+# add_subdirectory(matplot)
 add_subdirectory(Zlib)
 
 target_include_directories(main PUBLIC 
@@ -54,7 +60,7 @@ target_include_directories(gzstream PUBLIC
                             )           
 target_link_libraries(gzstream PUBLIC zlibstatic)
 
-target_link_libraries(main PUBLIC  matplot gzstream )
+target_link_libraries(main PUBLIC gzstream )
 
 target_compile_definitions(main PRIVATE TRACE_LOC="$ENV{TRACE_DIR}" LOG_LOC="${LOG_LOC}" RUN_LOC="${RUN_LOC}")
 
