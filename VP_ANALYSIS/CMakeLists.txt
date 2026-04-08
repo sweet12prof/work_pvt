@@ -11,8 +11,10 @@ file(MAKE_DIRECTORY "${RUN_LOC}")
 set(LOG_LOC ${CMAKE_SOURCE_DIR}/run/log/)
 file(MAKE_DIRECTORY "${LOG_LOC}")
 
+set(CMAKE_CXX_STANDARD 17)
 add_compile_definitions(TARGET_IA32E)
 set(dirs ".")
+
 
 # set(srcs)
 # foreach(dir IN LISTS dirs)
